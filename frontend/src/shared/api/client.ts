@@ -57,6 +57,7 @@ export const api = {
   startReview(id: string) {
     return request<FraudCase>(`/api/v1/fraud-cases/${encodeURIComponent(id)}/start-review`, {
       method: 'POST',
+      body: JSON.stringify({}),
     });
   },
   resolveCase(id: string, resolution: FraudCaseResolution, note: string) {
