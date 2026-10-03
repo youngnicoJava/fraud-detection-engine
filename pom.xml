@@ -1,0 +1,23 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+<modelVersion>4.0.0</modelVersion><groupId>com.frauddetection</groupId><artifactId>fraud-detection-engine</artifactId><version>1.0.0-SNAPSHOT</version><packaging>quarkus</packaging>
+<properties><maven.compiler.release>25</maven.compiler.release><project.build.sourceEncoding>UTF-8</project.build.sourceEncoding><quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id><quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id><quarkus.platform.version>3.39.5</quarkus.platform.version><compiler-plugin.version>3.15.0</compiler-plugin.version><surefire-plugin.version>3.5.6</surefire-plugin.version></properties>
+<dependencyManagement><dependencies><dependency><groupId>${quarkus.platform.group-id}</groupId><artifactId>${quarkus.platform.artifact-id}</artifactId><version>${quarkus.platform.version}</version><type>pom</type><scope>import</scope></dependency></dependencies></dependencyManagement>
+<dependencies>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-arc</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-rest-jackson</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-oidc</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-hibernate-orm-panache</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-jdbc-postgresql</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-flyway</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-hibernate-validator</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-smallrye-openapi</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-smallrye-health</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-micrometer-registry-prometheus</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-opentelemetry</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-logging-json</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-smallrye-fault-tolerance</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-messaging-kafka</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-scheduler</artifactId></dependency>
+<dependency><groupId>io.quarkus</groupId><artifactId>quarkus-junit</artifactId><scope>test</scope></dependency><dependency><groupId>io.quarkus</groupId><artifactId>quarkus-test-security</artifactId><scope>test</scope></dependency><dependency><groupId>io.rest-assured</groupId><artifactId>rest-assured</artifactId><scope>test</scope></dependency><dependency><groupId>org.assertj</groupId><artifactId>assertj-core</artifactId><version>3.27.3</version><scope>test</scope></dependency>
+</dependencies>
+<build><plugins><plugin><groupId>${quarkus.platform.group-id}</groupId><artifactId>quarkus-maven-plugin</artifactId><version>${quarkus.platform.version}</version><extensions>true</extensions></plugin><plugin><artifactId>maven-compiler-plugin</artifactId><version>${compiler-plugin.version}</version><configuration><parameters>true</parameters></configuration></plugin><plugin><artifactId>maven-surefire-plugin</artifactId><version>${surefire-plugin.version}</version><configuration><systemPropertyVariables><java.util.logging.manager>org.jboss.logmanager.LogManager</java.util.logging.manager><user.timezone>UTC</user.timezone></systemPropertyVariables></configuration></plugin><plugin><groupId>com.diffplug.spotless</groupId><artifactId>spotless-maven-plugin</artifactId><version>3.2.0</version><configuration><java><googleJavaFormat><version>1.30.0</version><style>GOOGLE</style></googleJavaFormat><includes><include>src/main/java/**/*.java</include><include>src/test/java/**/*.java</include></includes></java></configuration></plugin></plugins></build></project>

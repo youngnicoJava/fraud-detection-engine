@@ -1,0 +1,12 @@
+target/
+.git/
+.idea/
+.env
+!target/
+target/*
+!target/quarkus-app/
+target/quarkus-app/*
+!target/quarkus-app/lib/
+!target/quarkus-app/app/
+!target/quarkus-app/quarkus/
+!target/quarkus-app/*.jar

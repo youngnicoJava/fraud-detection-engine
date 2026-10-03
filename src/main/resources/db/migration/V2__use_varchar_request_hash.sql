@@ -1,0 +1,1 @@
+ALTER TABLE fraud_assessments ALTER COLUMN request_hash TYPE VARCHAR(64);

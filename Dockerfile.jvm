@@ -1,0 +1,11 @@
+FROM eclipse-temurin:25-jre
+WORKDIR /work
+RUN groupadd --system app && useradd --system --gid app --home-dir /work app
+COPY --chown=app:app target/quarkus-app/lib/ /work/lib/
+COPY --chown=app:app target/quarkus-app/*.jar /work/
+COPY --chown=app:app target/quarkus-app/app/ /work/app/
+COPY --chown=app:app target/quarkus-app/quarkus/ /work/quarkus/
+USER app
+EXPOSE 8083
+ENV PORT=8083
+ENTRYPOINT ["java","-Djava.util.logging.manager=org.jboss.logmanager.LogManager","-jar","/work/quarkus-run.jar"]

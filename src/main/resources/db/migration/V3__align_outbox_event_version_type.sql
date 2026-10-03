@@ -1,0 +1,1 @@
+ALTER TABLE fraud_outbox_events ALTER COLUMN event_version TYPE INTEGER;

@@ -1,0 +1,43 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: fraud-detection-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: fraud_detection
+      POSTGRES_USER: fraud_app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fraud_dev}
+    ports:
+      - "5435:5432"
+    volumes:
+      - fraud_postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fraud_app -d fraud_detection"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+  kafka:
+    image: apache/kafka:4.1.1
+    container_name: fraud-detection-kafka
+    profiles: ["standalone-kafka"]
+    restart: unless-stopped
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,HOST://:29093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,HOST://localhost:29093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,HOST:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    ports:
+      - "29093:29093"
+    volumes:
+      - fraud_kafka:/var/lib/kafka/data
+volumes:
+  fraud_postgres:
+  fraud_kafka:

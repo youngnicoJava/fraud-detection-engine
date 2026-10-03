@@ -1,0 +1,30 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: fraud_detection
+          POSTGRES_USER: fraud_app
+          POSTGRES_PASSWORD: fraud_dev
+        ports:
+          - 5435:5432
+        options: >-
+          --health-cmd "pg_isready -U fraud_app -d fraud_detection"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+      - name: Verify formatting and tests
+        run: mvn -B spotless:check verify
