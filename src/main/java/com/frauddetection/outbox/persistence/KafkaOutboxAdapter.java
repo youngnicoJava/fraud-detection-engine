@@ -5,6 +5,7 @@ import com.frauddetection.outbox.application.AssessmentResultPublisher;
 import com.frauddetection.outbox.application.PendingFraudEvent;
 import io.smallrye.reactive.messaging.kafka.Record;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.inject.Instance;
 import jakarta.inject.Inject;
 import jakarta.persistence.LockModeType;
 import jakarta.transaction.Transactional;
@@ -18,7 +19,7 @@ import org.eclipse.microprofile.reactive.messaging.Emitter;
 @ApplicationScoped
 public class KafkaOutboxAdapter implements AssessmentResultPublisher {
   private final FraudOutboxPanacheRepository repo;
-  private final Emitter<Record<String, String>> emitter;
+  private final Instance<Emitter<Record<String, String>>> emitter;
   private final ObjectMapper mapper;
   private final Clock clock;
   private final Config config;
@@ -26,7 +27,7 @@ public class KafkaOutboxAdapter implements AssessmentResultPublisher {
   @Inject
   public KafkaOutboxAdapter(
       FraudOutboxPanacheRepository r,
-      @Channel("fraud-assessment-results") Emitter<Record<String, String>> e,
+      @Channel("fraud-assessment-results") Instance<Emitter<Record<String, String>>> e,
       ObjectMapper m,
       Clock c,
       Config cfg) {
@@ -75,7 +76,13 @@ public class KafkaOutboxAdapter implements AssessmentResultPublisher {
     if (!config.getOptionalValue("fraud.kafka.enabled", Boolean.class).orElse(false)) return false;
     try {
       var root = mapper.readTree(json);
-      emitter.send(Record.of(root.path("aggregateId").asText(), json)).toCompletableFuture().join();
+      if (!emitter.isResolvable())
+        throw new IllegalStateException("Fraud result Kafka channel is unavailable");
+      emitter
+          .get()
+          .send(Record.of(root.path("aggregateId").asText(), json))
+          .toCompletableFuture()
+          .join();
       return true;
     } catch (Exception ex) {
       throw new IllegalStateException("Could not publish fraud result event", ex);
