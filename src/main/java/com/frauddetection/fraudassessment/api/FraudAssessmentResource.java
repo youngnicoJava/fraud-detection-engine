@@ -1,9 +1,12 @@
 package com.frauddetection.fraudassessment.api;
 
 import com.frauddetection.fraudassessment.application.AssessFraudUseCase;
+import com.frauddetection.fraudassessment.application.AssessmentPage;
+import com.frauddetection.fraudassessment.application.AssessmentQuery;
 import com.frauddetection.fraudassessment.application.FraudAssessmentRepository;
 import com.frauddetection.fraudassessment.domain.AssessmentInput;
 import com.frauddetection.fraudassessment.domain.FraudAssessment;
+import com.frauddetection.fraudassessment.domain.FraudAssessmentSummary;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -11,8 +14,11 @@ import jakarta.validation.constraints.*;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.eclipse.microprofile.openapi.annotations.enums.ParameterIn;
+import org.eclipse.microprofile.openapi.annotations.parameters.Parameter;
 import org.eclipse.microprofile.openapi.annotations.tags.Tag;
 
 @Path("/api/v1/fraud-assessments")
@@ -54,6 +60,41 @@ public class FraudAssessmentResource {
   }
 
   @GET
+  @RolesAllowed({"FRAUD_ANALYST", "ADMIN"})
+  @Operation(
+      summary = "Search fraud assessment history",
+      description = "Newest assessments first. Page is zero-based and size is limited to 100.")
+  public AssessmentListResponse list(
+      @Parameter(in = ParameterIn.QUERY, description = "Zero-based page")
+          @DefaultValue("0")
+          @QueryParam("page")
+          @Min(0)
+          int page,
+      @Parameter(in = ParameterIn.QUERY, description = "Page size, maximum 100")
+          @DefaultValue("20")
+          @QueryParam("size")
+          @Min(1)
+          @Max(100)
+          int size,
+      @QueryParam("decision") com.frauddetection.fraudassessment.domain.FraudDecision decision,
+      @QueryParam("riskLevel") com.frauddetection.fraudassessment.domain.FraudRiskLevel riskLevel,
+      @QueryParam("loanApplicationId") UUID loanApplicationId,
+      @QueryParam("assessmentRequestId") UUID assessmentRequestId,
+      @QueryParam("rulesetVersion") @Size(max = 40) String rulesetVersion) {
+    var result =
+        assessments.list(
+            new AssessmentQuery(
+                page,
+                size,
+                decision,
+                riskLevel,
+                loanApplicationId,
+                assessmentRequestId,
+                rulesetVersion));
+    return AssessmentListResponse.from(result);
+  }
+
+  @GET
   @Path("/{id}")
   @RolesAllowed({"FRAUD_ANALYST", "ADMIN"})
   @Operation(summary = "Retrieve a fraud assessment and its explanation")
@@ -86,6 +127,10 @@ public class FraudAssessmentResource {
       String decision,
       int fraudScore,
       String riskLevel,
+      BigDecimal requestedAmount,
+      String currency,
+      int termMonths,
+      String productType,
       String rulesetId,
       String rulesetVersion,
       java.time.Instant evaluatedAt,
@@ -93,7 +138,7 @@ public class FraudAssessmentResource {
       java.util.List<com.frauddetection.fraudassessment.domain.FraudSignal> signals,
       java.util.List<com.frauddetection.fraudassessment.domain.ScoreContribution> contributions,
       java.util.List<String> reasonCodes) {
-    static FraudAssessmentResponse from(FraudAssessment a) {
+    public static FraudAssessmentResponse from(FraudAssessment a) {
       return new FraudAssessmentResponse(
           a.id(),
           a.input().assessmentRequestId(),
@@ -101,6 +146,10 @@ public class FraudAssessmentResource {
           a.decision().name(),
           a.fraudScore(),
           a.riskLevel().name(),
+          a.input().requestedAmount(),
+          a.input().currency(),
+          a.input().termMonths(),
+          a.input().productType(),
           a.rulesetId(),
           a.rulesetVersion(),
           a.evaluatedAt(),
@@ -108,6 +157,14 @@ public class FraudAssessmentResource {
           a.signals(),
           a.contributions(),
           a.reasonCodes());
+    }
+  }
+
+  public record AssessmentListResponse(
+      List<FraudAssessmentSummary> items, int page, int size, long totalElements, int totalPages) {
+    static AssessmentListResponse from(AssessmentPage<FraudAssessmentSummary> page) {
+      return new AssessmentListResponse(
+          page.items(), page.page(), page.size(), page.totalElements(), page.totalPages());
     }
   }
 }

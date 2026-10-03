@@ -1,0 +1,91 @@
+.page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(ellipse at 50% 5%, #233445 0, var(--bg) 58%);
+}
+.card {
+  width: min(440px, 100%);
+  padding: 38px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: 0 24px 80px #080d1266;
+}
+.mark {
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: #315b7e;
+  color: #eef5fb;
+  font:
+    800 22px Manrope,
+    sans-serif;
+}
+.kicker {
+  margin-top: 28px;
+  color: #88a6c1;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+}
+.card h1 {
+  margin: 8px 0 10px;
+  font:
+    700 27px Manrope,
+    sans-serif;
+  letter-spacing: -0.03em;
+}
+.card p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.signIn {
+  width: 100%;
+  margin-top: 25px;
+  padding: 12px 15px;
+  border: 1px solid #527fa6;
+  border-radius: var(--radius-sm);
+  color: #f0f6fc;
+  background: #2e587b;
+  cursor: pointer;
+  font-weight: 700;
+}
+.signIn:hover {
+  background: #386a93;
+}
+.access {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 23px;
+  padding-top: 17px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+}
+.access strong {
+  color: var(--text);
+}
+.access span {
+  color: var(--text-muted);
+  text-align: right;
+}
+.dev {
+  margin-top: 24px;
+  color: var(--text-dim);
+  font-size: 11px;
+  line-height: 1.9;
+}
+.dev code {
+  color: #adbdca;
+}
+@media (max-width: 480px) {
+  .card {
+    padding: 28px 23px;
+  }
+}

@@ -37,7 +37,9 @@ public class OutboxPublisherJob {
                 .put("eventType", row.eventType() + ".v" + row.eventVersion())
                 .put("eventVersion", row.eventVersion())
                 .put("occurredAt", row.occurredAt().toString())
-                .put("aggregateType", "FraudAssessment")
+                .put(
+                    "aggregateType",
+                    row.eventType().startsWith("fraud.case.") ? "FraudCase" : "FraudAssessment")
                 .put("aggregateId", row.aggregateId().toString())
                 .put("correlationId", row.correlationId());
         event.set("payload", mapper.readTree(row.payload()));

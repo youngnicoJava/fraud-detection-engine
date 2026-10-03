@@ -17,13 +17,23 @@ class AssessFraudServiceTest {
   @Test
   void sameMaterialRequestReplaysAndDifferentRequestConflictsEvenAcrossCorrelationIds() {
     var store = new InMemoryRepository();
+    var clock = Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
+    var metrics = new SimpleMeterRegistry();
+    var caseService =
+        new FraudCaseService(
+            new InMemoryCases(),
+            store,
+            (fraudCase, actor, occurredAt, correlationId, eventId) -> {},
+            clock,
+            metrics);
     var service =
         new AssessFraudService(
             store,
             new LoanOriginationFraudPolicy(),
-            Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC),
+            clock,
             new ObjectMapper(),
-            new SimpleMeterRegistry());
+            metrics,
+            caseService);
     var input = input("corr-a");
     var first = service.assess(input);
     var replay = service.assess(input("corr-b"));
@@ -76,6 +86,10 @@ class AssessFraudServiceTest {
       return saved != null && saved.id().equals(id) ? Optional.of(saved) : Optional.empty();
     }
 
+    public AssessmentPage<FraudAssessmentSummary> list(AssessmentQuery query) {
+      return new AssessmentPage<>(List.of(), query.page(), query.size(), 0, 0);
+    }
+
     public List<AssessmentHistory> recentByCustomer(UUID id, int limit) {
       return List.of();
     }
@@ -84,5 +98,29 @@ class AssessFraudServiceTest {
       saved = a;
       saves++;
     }
+  }
+
+  static class InMemoryCases implements FraudCaseRepository {
+    public Optional<FraudCase> findById(UUID id) {
+      return Optional.empty();
+    }
+
+    public Optional<FraudCase> findByIdForUpdate(UUID id) {
+      return Optional.empty();
+    }
+
+    public Optional<FraudCase> findByAssessmentId(UUID id) {
+      return Optional.empty();
+    }
+
+    public AssessmentPage<FraudCaseSummary> list(FraudCaseQuery query) {
+      return new AssessmentPage<>(List.of(), query.page(), query.size(), 0, 0);
+    }
+
+    public FraudCase create(FraudCase fraudCase, FraudCaseAction action) {
+      return fraudCase;
+    }
+
+    public void saveTransition(FraudCase fraudCase, FraudCaseAction action) {}
   }
 }

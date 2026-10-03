@@ -1,6 +1,8 @@
 package com.frauddetection.shared;
 
 import com.frauddetection.fraudassessment.api.CorrelationContext;
+import com.frauddetection.fraudassessment.application.FraudCaseConflictException;
+import com.frauddetection.fraudassessment.application.FraudCaseNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
@@ -24,6 +26,14 @@ public class ApiErrorMapper implements ExceptionMapper<Throwable> {
               ? "NOT_FOUND"
               : status == 401 ? "UNAUTHORIZED" : status == 403 ? "FORBIDDEN" : "HTTP_ERROR";
       message = status >= 500 ? "An unexpected error occurred" : http.getMessage();
+    } else if (failure instanceof FraudCaseConflictException) {
+      status = 409;
+      code = "INVALID_CASE_STATE";
+      message = failure.getMessage();
+    } else if (failure instanceof FraudCaseNotFoundException) {
+      status = 404;
+      code = "FRAUD_CASE_NOT_FOUND";
+      message = "The requested fraud case was not found";
     } else if (failure instanceof ConstraintViolationException
         || failure instanceof IllegalArgumentException
         || failure instanceof BadRequestException) {

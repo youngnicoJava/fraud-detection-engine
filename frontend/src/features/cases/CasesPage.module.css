@@ -1,0 +1,116 @@
+.panel {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 11px;
+}
+.toolbar select {
+  min-width: 150px;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  background: var(--surface-soft);
+}
+.toolbar span {
+  margin-left: auto;
+  color: var(--text-dim);
+}
+.scroll {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 12px;
+}
+th {
+  padding: 11px 15px;
+  color: var(--text-dim);
+  background: #17212a;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+td {
+  padding: 13px 15px;
+  border-top: 1px solid #26333e;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+tbody tr:hover {
+  background: #1d2934;
+}
+td strong {
+  color: var(--text);
+}
+.max {
+  color: var(--text-dim);
+  font-size: 10px;
+}
+.reference {
+  color: #a9c9e6;
+  font:
+    500 11px ui-monospace,
+    monospace;
+}
+.inspect {
+  color: #91b8da;
+  font-size: 11px;
+}
+.reference:hover,
+.inspect:hover {
+  color: var(--accent-hover);
+}
+.empty {
+  min-height: 210px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 7px;
+  padding: 25px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+.empty strong {
+  color: var(--text);
+  font-size: 15px;
+}
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 13px 17px;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.pagination div {
+  display: flex;
+  gap: 7px;
+}
+.pagination button {
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  cursor: pointer;
+  font-size: 11px;
+}
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

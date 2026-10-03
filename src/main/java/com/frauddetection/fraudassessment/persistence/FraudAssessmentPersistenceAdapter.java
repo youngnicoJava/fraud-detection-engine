@@ -4,12 +4,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.frauddetection.fraudassessment.application.FraudAssessmentRepository;
 import com.frauddetection.fraudassessment.domain.AssessmentHistory;
 import com.frauddetection.fraudassessment.domain.FraudAssessment;
+import com.frauddetection.fraudassessment.domain.FraudAssessmentSummary;
+import com.frauddetection.fraudassessment.domain.FraudDecision;
+import com.frauddetection.fraudassessment.domain.FraudRiskLevel;
 import com.frauddetection.outbox.persistence.FraudOutboxEntity;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -30,6 +35,48 @@ public class FraudAssessmentPersistenceAdapter implements FraudAssessmentReposit
 
   public Optional<FraudAssessment> findById(UUID id) {
     return assessments.findByIdOptional(id).map(e -> e.toDomain(mapper));
+  }
+
+  public com.frauddetection.fraudassessment.application.AssessmentPage<FraudAssessmentSummary> list(
+      com.frauddetection.fraudassessment.application.AssessmentQuery query) {
+    StringBuilder filter = new StringBuilder("1 = 1");
+    Map<String, Object> parameters = new HashMap<>();
+    if (query.decision() != null) add(filter, parameters, "decision", query.decision().name());
+    if (query.riskLevel() != null) add(filter, parameters, "riskLevel", query.riskLevel().name());
+    if (query.loanApplicationId() != null)
+      add(filter, parameters, "loanApplicationId", query.loanApplicationId());
+    if (query.assessmentRequestId() != null)
+      add(filter, parameters, "requestId", query.assessmentRequestId());
+    if (query.rulesetVersion() != null)
+      add(filter, parameters, "rulesetVersion", query.rulesetVersion());
+    String criteria = filter.toString();
+    long total = assessments.countMatching(criteria, parameters);
+    var items =
+        assessments.search(criteria, parameters, query.page(), query.size()).stream()
+            .map(
+                entity ->
+                    new FraudAssessmentSummary(
+                        entity.id,
+                        entity.requestId,
+                        entity.loanApplicationId,
+                        FraudDecision.valueOf(entity.decision),
+                        entity.score,
+                        FraudRiskLevel.valueOf(entity.riskLevel),
+                        entity.evaluatedAt,
+                        entity.rulesetId,
+                        entity.rulesetVersion,
+                        entity.correlationId))
+            .toList();
+    int pages = total == 0 ? 0 : (int) ((total + query.size() - 1) / query.size());
+    return new com.frauddetection.fraudassessment.application.AssessmentPage<>(
+        items, query.page(), query.size(), total, pages);
+  }
+
+  private void add(
+      StringBuilder query, Map<String, Object> parameters, String field, Object value) {
+    String name = "filter" + parameters.size();
+    query.append(" and ").append(field).append(" = :").append(name);
+    parameters.put(name, value);
   }
 
   public List<AssessmentHistory> recentByCustomer(UUID id, int limit) {

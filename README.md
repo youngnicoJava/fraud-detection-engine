@@ -22,11 +22,30 @@ For standalone Kafka, start `docker compose --profile standalone-kafka up -d` an
 ## API and operations
 
 - `POST /api/v1/fraud-assessments`: direct deterministic evaluation (FRAUD_ANALYST, ADMIN)
+- `GET /api/v1/fraud-assessments`: filter and page persisted assessments
 - `GET /api/v1/fraud-assessments/{id}`: retrieve the persisted explanation
+- `GET /api/v1/fraud-cases`: page the analyst queue (`FRAUD_ANALYST`, `ADMIN`)
+- `GET /api/v1/fraud-cases/{id}`: inspect a case and its original assessment
+- `POST /api/v1/fraud-cases/{id}/start-review`: move an open case into review
+- `POST /api/v1/fraud-cases/{id}/resolve`: resolve an under-review case as `CLEARED` or `CONFIRMED_FRAUD`
 - `GET /q/health/live`, `GET /q/health/ready`
 - `GET /metrics`, `GET /q/openapi`
 
-A REVIEW response means suspicious signals warrant manual review; it does not reject the loan. BLOCK means a severe repeat-after-block signal was observed; Loan Origination owns any workflow consequence.
+A REVIEW response creates a manual FraudCase and does not reject the loan. BLOCK also creates a case and records a severe repeat-after-block signal; Loan Origination owns any workflow consequence. Case actions are append-only. Resolving a case stores one transactional outbox event (`fraud.case.resolved.v1`). When LO consumes a `CLEARED` result, it records that human disposition separately and can release the fraud gate; it does not rewrite the original automated REVIEW/BLOCK result. `CONFIRMED_FRAUD` keeps the gate uncleared.
+
+The event envelope and LO consumer contract are described in [fraud case resolution contract](docs/fraud-case-resolution-contract.md).
+
+## Analyst console
+
+The React + TypeScript console lives in [`frontend`](frontend/README.md). It provides an assessment queue with filtering and pagination, assessment explanations, and case investigation and resolution screens. It uses the local `fraud-analyst / fraud-analyst` and `admin / admin` development identities. The API remains responsible for authorization.
+
+```powershell
+cd frontend
+bun install
+bun run dev
+```
+
+The console listens on port 5175. Build and format checks are `bun run build` and `bun run format:check`; CI runs both checks along with backend Maven verification.
 
 ## Policy
 
@@ -40,7 +59,7 @@ mvn spotless:apply
 mvn spotless:check verify
 ```
 
-CI runs Java 25 with Maven formatting verification and `mvn verify`.
+CI runs Java 25 with Maven formatting verification and `mvn verify`, plus the frontend format check and strict TypeScript/Vite production build.
 
 ## Configuration
 

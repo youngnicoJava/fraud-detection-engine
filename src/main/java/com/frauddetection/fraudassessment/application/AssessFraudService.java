@@ -19,6 +19,7 @@ public class AssessFraudService implements AssessFraudUseCase {
   private final Clock clock;
   private final ObjectMapper mapper;
   private final MeterRegistry metrics;
+  private final FraudCaseService cases;
 
   @Inject
   public AssessFraudService(
@@ -26,12 +27,14 @@ public class AssessFraudService implements AssessFraudUseCase {
       LoanOriginationFraudPolicy p,
       Clock c,
       ObjectMapper m,
-      MeterRegistry metrics) {
+      MeterRegistry metrics,
+      FraudCaseService cases) {
     repository = r;
     policy = p;
     clock = c;
     mapper = m;
     this.metrics = metrics;
+    this.cases = cases;
   }
 
   @Override
@@ -55,6 +58,7 @@ public class AssessFraudService implements AssessFraudUseCase {
         policy.evaluate(
             input, clock.instant(), repository.recentByCustomer(input.customerReference(), 200));
     repository.saveWithResultOutbox(result, hash);
+    cases.openForAssessment(result);
     metrics.counter("fraud_assessments_total", "decision", result.decision().name()).increment();
     metrics
         .counter("fraud_assessments_by_risk_level_total", "risk_level", result.riskLevel().name())

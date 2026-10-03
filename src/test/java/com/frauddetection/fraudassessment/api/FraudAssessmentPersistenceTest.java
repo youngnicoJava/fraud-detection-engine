@@ -33,6 +33,85 @@ class FraudAssessmentPersistenceTest {
     assertThat(third.jsonPath().getList("reasonCodes", String.class))
         .contains("HIGH_APPLICATION_VELOCITY");
 
+    var filtered =
+        given()
+            .queryParam("page", 0)
+            .queryParam("size", 1)
+            .queryParam("decision", "REVIEW")
+            .queryParam("loanApplicationId", third.jsonPath().getString("loanApplicationId"))
+            .when()
+            .get("/api/v1/fraud-assessments")
+            .then()
+            .statusCode(200)
+            .extract();
+    assertThat(filtered.jsonPath().getLong("totalElements")).isEqualTo(1);
+    assertThat(filtered.jsonPath().getString("items[0].fraudAssessmentId"))
+        .isEqualTo(third.jsonPath().getString("fraudAssessmentId"));
+
+    var caseId =
+        (UUID)
+            entityManager
+                .createNativeQuery(
+                    "select id from fraud_cases where loan_application_id = :applicationId")
+                .setParameter(
+                    "applicationId",
+                    UUID.fromString(third.jsonPath().getString("loanApplicationId")))
+                .getSingleResult();
+    var opened =
+        given().when().get("/api/v1/fraud-cases/" + caseId).then().statusCode(200).extract();
+    assertThat(opened.jsonPath().getString("fraudCase.status")).isEqualTo("OPEN");
+    assertThat(opened.jsonPath().getString("assessment.decision")).isEqualTo("REVIEW");
+
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"resolution\":\"CLEARED\"}")
+        .when()
+        .post("/api/v1/fraud-cases/" + caseId + "/resolve")
+        .then()
+        .statusCode(409);
+    given()
+        .contentType(ContentType.JSON)
+        .when()
+        .post("/api/v1/fraud-cases/" + caseId + "/start-review")
+        .then()
+        .statusCode(200)
+        .body("status", org.hamcrest.Matchers.equalTo("UNDER_REVIEW"));
+    var resolved =
+        given()
+            .contentType(ContentType.JSON)
+            .body("{\"resolution\":\"CLEARED\",\"note\":\"Reviewed signals\"}")
+            .when()
+            .post("/api/v1/fraud-cases/" + caseId + "/resolve")
+            .then()
+            .statusCode(200)
+            .extract();
+    assertThat(resolved.jsonPath().getString("status")).isEqualTo("RESOLVED");
+    assertThat(resolved.jsonPath().getString("resolution")).isEqualTo("CLEARED");
+    assertThat(resolved.jsonPath().getList("history")).hasSize(3);
+    assertThat(
+            ((Number)
+                    entityManager
+                        .createNativeQuery(
+                            "select count(*) from fraud_outbox_events where event_type = 'fraud.case.resolved' and aggregate_id = :caseId")
+                        .setParameter("caseId", caseId)
+                        .getSingleResult())
+                .longValue())
+        .isEqualTo(1);
+
+    given()
+        .when()
+        .get("/api/v1/fraud-assessments/" + third.jsonPath().getString("fraudAssessmentId"))
+        .then()
+        .statusCode(200)
+        .body("decision", org.hamcrest.Matchers.equalTo("REVIEW"));
+    given()
+        .contentType(ContentType.JSON)
+        .body("{\"resolution\":\"CONFIRMED_FRAUD\"}")
+        .when()
+        .post("/api/v1/fraud-cases/" + caseId + "/resolve")
+        .then()
+        .statusCode(409);
+
     var replay = post(firstRequest, "corr-retry");
     assertThat(replay.jsonPath().getString("fraudAssessmentId")).isEqualTo(firstId);
     assertThat(replay.jsonPath().getString("correlationId")).isEqualTo("corr-first");
@@ -42,7 +121,14 @@ class FraudAssessmentPersistenceTest {
                     .createNativeQuery("select count(*) from fraud_outbox_events")
                     .getSingleResult())
             .longValue();
-    assertThat(after - before).isEqualTo(3);
+    assertThat(after - before).isEqualTo(4); // Tres evaluaciones y un evento de resolución de caso.
+  }
+
+  @Test
+  @TestSecurity(user = "viewer", roles = "CUSTOMER")
+  void analystEndpointsRejectNonAnalystRoles() {
+    given().when().get("/api/v1/fraud-assessments").then().statusCode(403);
+    given().when().get("/api/v1/fraud-cases").then().statusCode(403);
   }
 
   private io.restassured.response.ExtractableResponse<io.restassured.response.Response> post(
