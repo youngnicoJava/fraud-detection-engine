@@ -19,7 +19,8 @@ import org.eclipse.microprofile.reactive.messaging.Emitter;
 @ApplicationScoped
 public class KafkaOutboxAdapter implements AssessmentResultPublisher {
   private final FraudOutboxPanacheRepository repo;
-  private final Instance<Emitter<Record<String, String>>> emitter;
+  private final Instance<Emitter<Record<String, String>>> assessmentEmitter;
+  private final Instance<Emitter<Record<String, String>>> caseResolutionEmitter;
   private final ObjectMapper mapper;
   private final Clock clock;
   private final Config config;
@@ -27,12 +28,16 @@ public class KafkaOutboxAdapter implements AssessmentResultPublisher {
   @Inject
   public KafkaOutboxAdapter(
       FraudOutboxPanacheRepository r,
-      @Channel("fraud-assessment-results") Instance<Emitter<Record<String, String>>> e,
+      @Channel("fraud-assessment-results")
+          Instance<Emitter<Record<String, String>>> assessmentEmitter,
+      @Channel("fraud-case-resolutions")
+          Instance<Emitter<Record<String, String>>> caseResolutionEmitter,
       ObjectMapper m,
       Clock c,
       Config cfg) {
     repo = r;
-    emitter = e;
+    this.assessmentEmitter = assessmentEmitter;
+    this.caseResolutionEmitter = caseResolutionEmitter;
     mapper = m;
     clock = c;
     config = cfg;
@@ -76,9 +81,14 @@ public class KafkaOutboxAdapter implements AssessmentResultPublisher {
     if (!config.getOptionalValue("fraud.kafka.enabled", Boolean.class).orElse(false)) return false;
     try {
       var root = mapper.readTree(json);
-      if (!emitter.isResolvable())
-        throw new IllegalStateException("Fraud result Kafka channel is unavailable");
-      emitter
+      String eventType = root.path("eventType").asText();
+      var target =
+          channelFor(eventType).equals("fraud-case-resolutions")
+              ? caseResolutionEmitter
+              : assessmentEmitter;
+      if (!target.isResolvable())
+        throw new IllegalStateException("Fraud event Kafka channel is unavailable");
+      target
           .get()
           .send(Record.of(root.path("aggregateId").asText(), json))
           .toCompletableFuture()
@@ -87,6 +97,12 @@ public class KafkaOutboxAdapter implements AssessmentResultPublisher {
     } catch (Exception ex) {
       throw new IllegalStateException("Could not publish fraud result event", ex);
     }
+  }
+
+  static String channelFor(String eventType) {
+    return eventType.startsWith("fraud.case.")
+        ? "fraud-case-resolutions"
+        : "fraud-assessment-results";
   }
 
   @Override
