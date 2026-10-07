@@ -1,10 +1,14 @@
 # Kafka contracts
 
-## Request
+---
+
+### Request
 
 Topic: `loan.fraud-assessment.requested.v1`; eventType `loan.fraud-assessment.requested.v1`; version 1. The envelope follows the portfolio's eventId/eventType/eventVersion/occurredAt/aggregateType/aggregateId/correlationId/payload shape. Payload fields are assessmentRequestId, loanApplicationId, customerReference, requestedAmount, currency, termMonths, productType, monthlyIncome, existingMonthlyDebtObligations, employmentStatus and employmentTenureMonths. It intentionally excludes name, email, subject identity and unprovided device/network/document signals.
 
-## Result
+---
+
+### Result
 
 Topic: `fraud.assessment.completed.v1`; eventType `fraud.assessment.completed.v1`; version 1. Payload includes assessmentRequestId, loanApplicationId, fraudAssessmentId, decision, fraudScore, riskLevel, reasonCodes, rulesetId/version and evaluatedAt.
 

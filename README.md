@@ -1,70 +1,95 @@
 # Fraud Detection Engine
 
-Deterministic fraud-signal evaluation for loan origination. This is the third independent application in the banking portfolio. It does not make credit decisions and does not update loan applications.
+Servicio independiente que detecta señales potencialmente sospechosas en solicitudes de préstamo y permite investigarlas. No calcula capacidad crediticia ni cambia directamente solicitudes o préstamos.
 
-## Architecture and scope
+## Ecosistema
 
-The code is organized by business capability, with API, application, domain and persistence packages inside the assessment capability. This modular layered structure keeps the signal/rule model cohesive while avoiding framework-wide controller/service/repository buckets. The engine uses no machine learning and no external identity, device, bureau or document provider.
+LO posee workflow; Credit Risk evalúa finanzas; Fraud busca señales de fraude. Son bounded contexts con persistencia separada, comunicados mediante contratos Kafka.
 
-## Local run
+```mermaid
+flowchart LR
+ LO[Loan Origination] -->|loan.fraud-assessment.requested.v1| K[(Kafka)]
+ K --> FD[Fraud Detection]
+ FD -->|fraud.assessment.completed.v1| K
+ FD -->|fraud.case.resolved.v1| K
+ K --> LO
+ A[Analista] --> UI[Consola React]
+ UI -->|OIDC + REST| FD
+ FD --> DB[(PostgreSQL Fraud)]
+```
 
-Requirements: Java 25, Maven and Docker Compose.
+## Arquitectura y policy
+
+Modular Layered Architecture por capability: API, application, domain y persistence. Policy loan-origination-fraud 1.0.0; determinista, sin ML, score 0–100 no probabilístico.
+
+| Señal                                   | Regla                              | Puntos |
+| --------------------------------------- | ---------------------------------- | -----: |
+| HIGH_APPLICATION_VELOCITY               | ≥3 solicitudes/referencia en 24 h  |     35 |
+| APPLICATION_AMOUNT_ESCALATION           | Importe >50% sobre previa reciente |     20 |
+| MATERIAL_INCOME_CHANGE                  | Ingreso declarado cambia >50%      |     20 |
+| MATERIAL_DEBT_CHANGE                    | Deuda declarada cambia >50%        |     15 |
+| RAPID_RESUBMISSION_AFTER_BLOCK          | BLOCK previo dentro de 24 h        |     60 |
+| EXTREME_VELOCITY_WITH_AMOUNT_ESCALATION | ≥6/24 h y subida >50%              |     60 |
+
+LOW 0–24 → PASS; MEDIUM 25–59 y HIGH 60–100 → REVIEW normalmente. Reenvío rápido tras BLOCK o regla combinada extrema → BLOCK. REVIEW/BLOCK abre Fraud Case.
+
+Assessment automático permanece inmutable. Case: OPEN → UNDER_REVIEW → RESOLVED; resolución CLEARED o CONFIRMED_FRAUD. Historial append-only CASE_OPENED/REVIEW_STARTED/CASE_RESOLVED. La resolución genera fraud.case.resolved.v1: CLEARED puede abrir gate de LO; CONFIRMED_FRAUD no. Fraud no aprueba/rechaza la solicitud.
+
+## Roles, UI y API
+
+Sólo FRAUD_ANALYST y ADMIN; no existe rol AUDITOR en esta API. Realm local fraud-detection, cliente SPA fraud-detection-console/PKCE. Usuarios dev fraud-analyst/fraud-analyst y admin/admin. Rutas /login, /assessments, /assessments/:id, /cases y /cases/:id. Lista de cases separada; detalle muestra assessment e historial.
+
+| Método   | Endpoint                              | Función                          |
+| -------- | ------------------------------------- | -------------------------------- |
+| POST/GET | /api/v1/fraud-assessments             | Evaluar/listar                   |
+| GET      | /api/v1/fraud-assessments/{id}        | Detalle                          |
+| GET      | /api/v1/fraud-cases                   | Cola                             |
+| GET      | /api/v1/fraud-cases/{id}              | Caso/historial                   |
+| POST     | /api/v1/fraud-cases/{id}/start-review | Iniciar revisión                 |
+| POST     | /api/v1/fraud-cases/{id}/resolve      | Resolver CLEARED/CONFIRMED_FRAUD |
+
+## Kafka y fiabilidad
+
+| Topic                                  | Productor → consumidor                   | Uso                 |
+| -------------------------------------- | ---------------------------------------- | ------------------- |
+| loan.fraud-assessment.requested.v1     | LO → Fraud; group fraud-detection-engine | Petición            |
+| fraud.assessment.completed.v1          | Fraud → LO                               | Resultado           |
+| fraud.case.resolved.v1                 | Fraud → LO                               | Disposición humana  |
+| loan.fraud-assessment.requested.v1.DLQ | Consumer Fraud                           | Error no procesable |
+
+assessmentRequestId deduplica persistente; clave igual/contenido distinto conflictúa. Estado/outbox commit atómico; publisher posterior at-least-once, no exactly-once. Correlation ID sigue eventos; acciones humanas posteriores pueden tener correlation nueva. Kafka deshabilitado por defecto.
+
+## Desarrollo y operación
+
+|  API |   DB | Keycloak | Frontend | Kafka standalone |
+| ---: | ---: | -------: | -------: | ---------------: |
+| 8083 | 5435 |     8182 |     5175 |            29093 |
+
+Java25, Maven, Docker Compose, Bun. Desde raíz:
 
 ```powershell
 docker compose up -d postgres
-mvn quarkus:dev
+.\mvnw.cmd quarkus:dev
 ```
 
-The API listens on port 8083; Keycloak Dev Services uses 8182. Local development users are `fraud-analyst / fraud-analyst` (FRAUD_ANALYST) and `admin / admin` (ADMIN). These credentials are development-only.
+Otra terminal: cd frontend; bun install; bun run dev. API 8083, UI 5175. Para Kafka aislado: docker compose --profile standalone-kafka up -d y FRAUD_KAFKA_ENABLED=true; ecosistema local puede reutilizar broker Credit Risk 29092. No compartir DB.
 
-For standalone Kafka, start `docker compose --profile standalone-kafka up -d` and set `FRAUD_KAFKA_ENABLED=true` and `KAFKA_BOOTSTRAP_SERVERS=localhost:29093`. For the full portfolio on one machine, reuse Credit Risk's broker on `localhost:29092`; the applications can run as host processes with their independent PostgreSQL databases. In an all-container setup, attach each compose project to a deliberately shared Docker network and use the broker service DNS name; do not share databases.
-
-## API and operations
-
-- `POST /api/v1/fraud-assessments`: direct deterministic evaluation (FRAUD_ANALYST, ADMIN)
-- `GET /api/v1/fraud-assessments`: filter and page persisted assessments
-- `GET /api/v1/fraud-assessments/{id}`: retrieve the persisted explanation
-- `GET /api/v1/fraud-cases`: page the analyst queue (`FRAUD_ANALYST`, `ADMIN`)
-- `GET /api/v1/fraud-cases/{id}`: inspect a case and its original assessment
-- `POST /api/v1/fraud-cases/{id}/start-review`: move an open case into review
-- `POST /api/v1/fraud-cases/{id}/resolve`: resolve an under-review case as `CLEARED` or `CONFIRMED_FRAUD`
-- `GET /q/health/live`, `GET /q/health/ready`
-- `GET /metrics`, `GET /q/openapi`
-
-A REVIEW response creates a manual FraudCase and does not reject the loan. BLOCK also creates a case and records a severe repeat-after-block signal; Loan Origination owns any workflow consequence. Case actions are append-only. Resolving a case stores one transactional outbox event (`fraud.case.resolved.v1`). When LO consumes a `CLEARED` result, it records that human disposition separately and can release the fraud gate; it does not rewrite the original automated REVIEW/BLOCK result. `CONFIRMED_FRAUD` keeps the gate uncleared.
-
-The event envelope and LO consumer contract are described in [fraud case resolution contract](docs/fraud-case-resolution-contract.md).
-
-## Analyst console
-
-The React + TypeScript console lives in [`frontend`](frontend/README.md). It provides an assessment queue with filtering and pagination, assessment explanations, and case investigation and resolution screens. It uses the local `fraud-analyst / fraud-analyst` and `admin / admin` development identities. The API remains responsible for authorization.
+Variables productivas: PORT, DB_USERNAME, DB_PASSWORD, DB_JDBC_URL, OIDC_AUTH_SERVER_URL, OIDC_CLIENT_ID, FRONTEND_ORIGIN, KAFKA_BOOTSTRAP_SERVERS, FRAUD_KAFKA_ENABLED, OTEL_*. Dev Services/usuarios demo sólo desarrollo. Health /q/health/live, /q/health/ready; métricas /q/metrics; OpenAPI /q/openapi; Swagger /q/swagger-ui. Flyway migrations, Hibernate validate, OTLP opcional, JSON logs prod.
 
 ```powershell
+.\mvnw.cmd spotless:check verify
 cd frontend
-bun install
-bun run dev
+bun install --frozen-lockfile
+bun run build
+bun run format:check
 ```
 
-The console listens on port 5175. Build and format checks are `bun run build` and `bun run format:check`; CI runs both checks along with backend Maven verification.
+## Alcance y competencias
 
-## Policy
+Sin ML, bureau, identidad/dispositivo externo, KYC/AML, fraude de pagos ni investigación documental. Policy demostrativa, no confirmación legal. Demuestra modelado de reglas, Modular Layered, Quarkus/Java, PostgreSQL/Flyway, Kafka/outbox/dedupe/DLQ, OIDC/RBAC, historial append-only, React/TypeScript, health/métricas/OTel y CI. Licencia MIT: ver LICENSE.
 
-The policy identifier is `loan-origination-fraud`, version `1.0.0`. It considers application velocity over 24 hours, amount escalation, material declared-income/debt changes, and rapid resubmission following a recent BLOCK. The score is bounded 0–100 and is not a calibrated probability. Thresholds are demonstration policy values, not a bank's proprietary rules. See [fraud policy](docs/fraud-policy.md) and [domain model](docs/domain-model.md).
-
-## Verification and formatting
-
-```powershell
-docker compose up -d postgres
-mvn spotless:apply
-mvn spotless:check verify
-```
-
-CI runs Java 25 with Maven formatting verification and `mvn verify`, plus the frontend format check and strict TypeScript/Vite production build.
-
-## Configuration
-
-Set `DB_USERNAME`, `DB_PASSWORD`, `DB_JDBC_URL`, `OIDC_AUTH_SERVER_URL`, `OIDC_CLIENT_ID`, `KAFKA_BOOTSTRAP_SERVERS`, `FRAUD_KAFKA_ENABLED`, and optional `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_EXPORTER_OTLP_ENABLED`. The production profile requires database and OIDC configuration; no production secrets are stored here.
-
-## Portfolio boundaries
-
-Loan Origination owns applications, offers and loan state. Credit Risk assesses eligibility and affordability. Fraud Detection assesses suspicious application behavior. They communicate through versioned Kafka contracts; there are no source-code dependencies or shared databases. Block 2 adds the analyst investigation experience.
+| Proyecto                  | Dominio           | Arquitectura      | Responsabilidad        | Integración |
+| ------------------------- | ----------------- | ----------------- | ---------------------- | ----------- |
+| Loan Origination Platform | Lending           | Hexagonal         | Workflow préstamo      | Kafka       |
+| Credit Risk Engine        | Riesgo crediticio | Clean             | Capacidad/eligibilidad | Kafka       |
+| Fraud Detection Engine    | Fraude            | Modular por capas | Señales/casos          | Kafka       |
