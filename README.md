@@ -2,6 +2,42 @@
 
 Servicio independiente que detecta señales potencialmente sospechosas en solicitudes de préstamo y permite investigarlas. No calcula capacidad crediticia ni cambia directamente solicitudes o préstamos.
 
+## Recorrido visual y lectura técnica
+
+**Java 25 · Quarkus 3.39.5 · PostgreSQL · Flyway · Kafka/outbox · OIDC/Keycloak · React · TypeScript**
+
+![Consola real de evaluaciones de fraude](docs/assets/screenshots/assessments.jpg)
+
+Este motor separa detección automática e investigación humana. Una regla puede producir REVIEW y abrir un caso; resolverlo como CLEARED conserva el assessment original y emite una disposición distinta. Esa separación permite trazabilidad y evita borrar la señal detectada.
+
+### Señal explicable
+
+![REVIEW por velocidad de solicitudes](docs/assets/screenshots/assessment-review.jpg)
+
+El ejemplo obtiene 35/100 por tres intentos en 24 horas. El score es determinista y no representa una probabilidad de fraude.
+
+### Caso y acciones del analista
+
+![Caso resuelto sin modificar el assessment REVIEW](docs/assets/screenshots/case-resolved.jpg)
+
+![Historial append-only de investigación](docs/assets/screenshots/case-history.jpg)
+
+La base capturada contiene 30 evaluaciones y siete casos resueltos. No había un registro BLOCK: se muestra el filtro vacío en la galería y se explican sus reglas mediante código y tests.
+
+**11 capturas reales**: autenticación, PASS/REVIEW, casos, resolución, historial, filtros y Swagger. [Ver la galería completa](docs/visual-tour.md).
+
+## Documentación para explorar el proyecto
+
+| Documento | Contenido |
+|---|---|
+| [Índice técnico](docs/README.md) | Recorrido sugerido y documentos existentes |
+| [Galería real](docs/visual-tour.md) | 11 capturas, roles, rutas y contexto de cada pantalla |
+| [Backend paso a paso](docs/backend-walkthrough.md) | Reglas, transacciones, identidad e invariantes |
+| [Flujo entre los tres servicios](docs/ecosystem-flow.md) | Contratos Kafka, gates, outbox y modos LOCAL/KAFKA |
+| [Evidencia de esta campaña](docs/evidence-2026-10-10.md) | Entorno, tests, builds y límites de lo verificado |
+
+Las capturas son del frontend real conectado a los backends y PostgreSQL de desarrollo, tomadas el **10/10/2026** con datos de prueba existentes. No son mockups ni pantallas fabricadas. La sesión consultó fixtures históricos; no ejecutó nuevas operaciones financieras ni un E2E Kafka. Ver detalles y estado de builds en la evidencia.
+
 ## Ecosistema
 
 LO posee workflow; Credit Risk evalúa finanzas; Fraud busca señales de fraude. Son bounded contexts con persistencia separada, comunicados mediante contratos Kafka.

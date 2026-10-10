@@ -1,0 +1,119 @@
+{
+  "project": "Fraud Detection Engine",
+  "environment": "REAL_LOCAL_DEVELOPMENT",
+  "data": "EXISTING_PUBLIC_DEMO_FIXTURES",
+  "campaignDate": "2026-10-10",
+  "integrationE2EExecuted": false,
+  "screenshots": [
+    {
+      "file": "assessments.jpg",
+      "title": "Historial de decisiones automáticas",
+      "role": "FRAUD_ANALYST",
+      "route": "/assessments",
+      "context": "30 evaluaciones existentes. PASS y REVIEW pertenecen al assessment; no son resoluciones humanas.",
+      "capturedAt": "2026-10-10T07:17:35.838Z",
+      "sha256": "efbb4692b82b6e704e18c40ccd8393c88b0dfb91d48e9eadeb27470c3495cff3",
+      "bytes": 79492
+    },
+    {
+      "file": "login.jpg",
+      "title": "Acceso de investigación",
+      "role": "PUBLIC",
+      "route": "/login",
+      "context": "Pantalla real del frontend y usuarios de demostración públicos.",
+      "capturedAt": "2026-10-10T07:16:48.525Z",
+      "sha256": "1f989565cba55971d5a3580796ca7647e5189168d943fb9474ec7e440f8ca060",
+      "bytes": 31941
+    },
+    {
+      "file": "keycloak.jpg",
+      "title": "Identidad del analista",
+      "role": "PUBLIC",
+      "route": "/realms/fraud-detection/protocol/openid-connect/auth",
+      "context": "Realm separado y formulario de autenticación vacío.",
+      "capturedAt": "2026-10-10T07:17:05.247Z",
+      "sha256": "96b9e75644a5068d1503c1571e48c6a3e0c23ade01c6d16987c0e51c544aefe5",
+      "bytes": 38271
+    },
+    {
+      "file": "assessment-pass.jpg",
+      "title": "Sin señales relevantes: PASS",
+      "role": "FRAUD_ANALYST",
+      "route": "/assessments/c95453d8-eb77-479d-9296-2021828ea725",
+      "context": "Score 0/100, nivel LOW y NO_MATERIAL_FRAUD_SIGNALS. El importe de este fixture no implica elegibilidad en Credit Risk.",
+      "capturedAt": "2026-10-10T07:18:48.183Z",
+      "sha256": "614331e0dd65ed9cd4dc671668762c4062fa677c65c0d7bbaf26c4f7c740724a",
+      "bytes": 64667
+    },
+    {
+      "file": "assessment-review.jpg",
+      "title": "Velocidad de solicitudes: REVIEW",
+      "role": "FRAUD_ANALYST",
+      "route": "/assessments/3003c6aa-2937-48f3-9370-8c691d8c457a",
+      "context": "Score 35/100, MEDIUM y HIGH_APPLICATION_VELOCITY: tres intentos en 24 horas requieren investigación.",
+      "capturedAt": "2026-10-10T07:17:49.128Z",
+      "sha256": "60eb60efd532f28b9f2896f02b22a47798e294f343d712802d9b12c82322f2b7",
+      "bytes": 81345
+    },
+    {
+      "file": "cases.jpg",
+      "title": "Cola de casos",
+      "role": "FRAUD_ANALYST",
+      "route": "/cases",
+      "context": "Siete casos existentes, todos resueltos en esta base. El servicio conserva la separación assessment/case.",
+      "capturedAt": "2026-10-10T07:17:59.102Z",
+      "sha256": "a54a5eefe800db1367bb8caa9692bf84dd6d5ee52dabbe7dc6aa1c66cc520f38",
+      "bytes": 80476
+    },
+    {
+      "file": "case-resolved.jpg",
+      "title": "Resolución humana CLEARED",
+      "role": "FRAUD_ANALYST",
+      "route": "/cases/857868bc-6b81-4257-8138-9c99d91554c6",
+      "context": "Caso RESOLVED con CLEARED. La decisión automática original sigue siendo REVIEW: resolver no reescribe el assessment.",
+      "capturedAt": "2026-10-10T07:18:23.817Z",
+      "sha256": "663f37bbfabab1d2a538bab02386368bd61cf018dbe67430a8650e5fb454ebf8",
+      "bytes": 80963
+    },
+    {
+      "file": "case-history.jpg",
+      "title": "Historial de investigación",
+      "role": "FRAUD_ANALYST",
+      "route": "/cases/857868bc-6b81-4257-8138-9c99d91554c6",
+      "context": "CASE_OPENED, REVIEW_STARTED y CASE_RESOLVED con actor y timestamps. No se resolvió un nuevo caso durante la captura.",
+      "capturedAt": "2026-10-10T07:18:24.500Z",
+      "sha256": "c0730f489fbb328ce42286ef869dc622b3c3cea49bc4f57eab4ab1e82dd65b32",
+      "bytes": 78901
+    },
+    {
+      "file": "filter-empty.jpg",
+      "title": "Filtro BLOCK sin resultados",
+      "role": "FRAUD_ANALYST",
+      "route": "/assessments",
+      "context": "Estado vacío real. No había un fixture BLOCK persistido; sus reglas se documentan mediante código y tests, sin inventar una captura.",
+      "capturedAt": "2026-10-10T07:18:41.544Z",
+      "sha256": "c7527abf7b184b6fb68dd80ba1e0ca8f513ab08c93bcf368b2bedfd871a39493",
+      "bytes": 46731
+    },
+    {
+      "file": "swagger.jpg",
+      "title": "API de fraude y casos",
+      "role": "PUBLIC",
+      "route": "/q/swagger-ui",
+      "context": "Contrato REST real del backend, no una API financiera ni una operación sobre Loan.",
+      "capturedAt": "2026-10-10T07:19:01.720Z",
+      "sha256": "491a51cd5a5101eca815b0fdeaa6fb405aa3413f2312cf081760f9257e44f0d8",
+      "bytes": 88077
+    },
+    {
+      "file": "case-api.jpg",
+      "title": "Contrato de resolución",
+      "role": "PUBLIC",
+      "route": "/q/swagger-ui",
+      "context": "POST resolve con CLEARED/CONFIRMED_FRAUD y nota. Ejemplos autogenerados de Swagger son plantillas; no prueban una transición ejecutada.",
+      "capturedAt": "2026-10-10T07:19:02.873Z",
+      "sha256": "770e99ff1d5fd9d73ca5ace833c063156bf15644e2c930b8e7a1da61e46e3884",
+      "bytes": 86454
+    }
+  ]
+}
